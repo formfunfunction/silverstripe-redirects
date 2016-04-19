@@ -104,11 +104,11 @@ class RedirectUrl extends DataObject implements PermissionProvider
         if ($this->getField('From') || $this->getField('To')) {
             $manual->setStartClosed(false);
         }
-        
+
         if ($this->getField('FromRelationID') || $this->getField('ToRelationID')) {
             $page->setStartClosed(false);
         }
-        
+
         return $fields;
     }
 
@@ -167,7 +167,7 @@ class RedirectUrl extends DataObject implements PermissionProvider
     protected function getLinkRelation($type)
     {
         $relation = $this->getComponent(sprintf("%sRelation", $type));
-        
+
         return $relation->exists() ? $relation : false;
     }
 
@@ -240,7 +240,7 @@ class RedirectUrl extends DataObject implements PermissionProvider
     protected function onBeforeWrite()
     {
         parent::onBeforeWrite();
-        
+
         if ($this->isChanged('FromRelationID') && $this->getLinkRelation('From')) {
             $this->setField('From', '');
         }
@@ -255,7 +255,64 @@ class RedirectUrl extends DataObject implements PermissionProvider
 
         if ($this->isChanged('To') && $this->getField('To')) {
             $this->setField('ToRelationID', 0);
+
         }
+    }
+
+
+    /**
+     * run a cleanup on the uris and
+     * check for duplicates
+     * @return ValidationResult
+     */
+    protected function validate()
+    {
+        $result = parent::validate();
+        $this->cleanURIs();
+        $this->checkForDuplicates($result);
+        $this->checkValidDestination($result);
+
+        return $result;
+    }
+
+
+    /**
+     * make a call to destination and make sure it does not return a 404
+     * @param $result
+     */
+    protected function checkValidDestination($result)
+    {
+
+    }
+
+    /**
+     * check for duplicates
+     * @param $result
+     */
+    protected function checkForDuplicates($result)
+    {
+        if (empty($this->FromRelationID) || $this->FromRelationID == 0) {
+            $existing = RedirectUrl::get()->where("`From` = '$this->From'")->first();
+        } else {
+            $existing = RedirectUrl::get()->where("`FromRelationID` = '$this->FromRelationID'")->first();
+        }
+
+        if ($existing instanceof RedirectUrl && $existing->ID != $this->ID) {
+            $result->combineAnd(
+                new ValidationResult(
+                    false,
+                    "A redirect for this URL already exists.
+Please edit <a href='/admin/redirects-management/RedirectUrl/EditForm/field/RedirectUrl/item/$existing->ID/edit'>the existing one</a> instead."));
+        }
+    }
+
+    /**
+     * Clean up the URIs. if not external, make sure they start and finish with "/"
+     * and do not contain whitespaces
+     */
+    protected function cleanURIs()
+    {
+
     }
 
     /**
