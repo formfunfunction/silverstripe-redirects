@@ -268,7 +268,8 @@ class RedirectUrl extends DataObject implements PermissionProvider
     protected function validate()
     {
         $result = parent::validate();
-        $this->cleanURIs();
+        $this->From = $this->cleanURI($this->From);
+        $this->To = $this->cleanURI($this->To);
         $this->checkForDuplicates($result);
         $this->checkValidDestination($result);
 
@@ -310,9 +311,19 @@ Please edit <a href='/admin/redirects-management/RedirectUrl/EditForm/field/Redi
      * Clean up the URIs. if not external, make sure they start and finish with "/"
      * and do not contain whitespaces
      */
-    protected function cleanURIs()
+    protected function cleanURI($field)
     {
+        if (isset($field) && substr($field, 0, 4) != "http") {
+            $field = str_replace(' ', '', $field);
+            if (substr($field, 0, 1) != '/') {
+                $field = '/' . $field;
+            }
+            if (substr($field, -1) != '/') {
+                $field = $field . '/';
+            }
+        }
 
+        return $field;
     }
 
     /**
