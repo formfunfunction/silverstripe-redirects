@@ -1,6 +1,7 @@
 <?php
 
 use Heyday\Redirects\DataSource\CachedDataSource;
+use GuzzleHttp\Client;
 
 /**
  * @package Heyday\Redirects
@@ -283,6 +284,25 @@ class RedirectUrl extends DataObject implements PermissionProvider
      */
     protected function checkValidDestination($result)
     {
+        if (isset($this->To) && !empty($this->To)) {
+            if (substr($this->To, 0, 4) == "http") {
+                $url = $this->To;
+            } else {
+                $url = rtrim(Director::absoluteBaseURL(), '/') . $this->To;
+            }
+            $client = new Client();
+            try {
+                $client->get($url);
+            } catch (Exception $e) {
+                $code = $e->getCode();
+                $result->combineAnd(
+                    new ValidationResult(
+                        false,
+                        "Your destination has returned a $code error. Please double check your entry."));
+            }
+
+
+        }
 
     }
 
@@ -313,7 +333,7 @@ Please edit <a href='/admin/redirects-management/RedirectUrl/EditForm/field/Redi
      */
     protected function cleanURI($field)
     {
-        if (isset($field) && substr($field, 0, 4) != "http") {
+        if (isset($field) && !empty($field) && substr($field, 0, 4) != "http") {
             $field = str_replace(' ', '', $field);
             if (substr($field, 0, 1) != '/') {
                 $field = '/' . $field;
